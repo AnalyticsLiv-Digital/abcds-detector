@@ -34,6 +34,19 @@ from gcp_api_services import gcs_api_service
 from configuration import FFMPEG_BUFFER, FFMPEG_BUFFER_REDUCED, Configuration
 import models
 
+EXCLUDED_FROM_SCORE_FEATURE_IDS = {
+    # Brand speech features
+    "b_brand_mention_speech",
+    "b_brand_mention_speech_1st_5_secs",
+
+    # Product speech features
+    "b_product_mention_speech",
+    "b_product_mention_speech_1st_5_secs",
+
+    # Audio / CTA speech features
+    "d_audio_speech_early_1st_5_secs",
+    "d_call_to_action_speech",
+}
 
 def get_knowledge_graph_entities(
     config: Configuration, queries: list[str]
@@ -142,19 +155,54 @@ def print_abcd_assessment(
   print_score_details(evaluated_features)
 
 
+def is_feature_excluded_from_score(
+    feature_evaluation: models.FeatureEvaluation,
+) -> bool:
+  """Returns True if a feature should be analyzed but excluded from scoring."""
+  return feature_evaluation.feature.id in EXCLUDED_FROM_SCORE_FEATURE_IDS
+
+
+def get_scoreable_features(
+    evaluated_features: list[models.FeatureEvaluation],
+) -> list[models.FeatureEvaluation]:
+  """Return only the evaluated features that should contribute to scoring."""
+  return [
+      feature
+      for feature in evaluated_features
+      if not is_feature_excluded_from_score(feature)
+  ]
+
+
 def print_score_details(
     evaluated_features: list[models.FeatureEvaluation],
 ) -> None:
-  """Print score details"""
-  total_features = len(evaluated_features)
+  """Print score details.
+
+  All features are still displayed, but excluded features do not contribute
+  to the final score numerator or denominator.
+  """
+  scoreable_features = get_scoreable_features(evaluated_features)
+
+  total_features = len(scoreable_features)
   total_features_detected = len(
-      [feature for feature in evaluated_features if feature.detected]
+      [feature for feature in scoreable_features if feature.detected]
   )
+
+  excluded_features_count = len(evaluated_features) - len(scoreable_features)
+
   score = calculate_score(evaluated_features)
+
   print(
       f"Video score: {round(score, 2)}%, adherence"
       f" ({total_features_detected}/{total_features})\n"
   )
+
+  if excluded_features_count > 0:
+    print(
+        f"Note: {excluded_features_count} analyzed feature(s) were excluded"
+        " from final score calculation.\n"
+    )
+
   if score >= 80:
     print("Asset result: ✅ Excellent \n")
   elif score >= 65 and score < 80:
@@ -164,12 +212,18 @@ def print_score_details(
 
   print("Evaluated Features: \n")
   for eval_feature in evaluated_features:
-    if eval_feature.detected:
-      print(f" * ✅ {eval_feature.feature.name}")
-    else:
-      print(f" * ❌ {eval_feature.feature.name}")
-  print("\n")
+    excluded_label = (
+        " [Analyzed, excluded from score]"
+        if is_feature_excluded_from_score(eval_feature)
+        else ""
+    )
 
+    if eval_feature.detected:
+      print(f" * ✅ {eval_feature.feature.name}{excluded_label}")
+    else:
+      print(f" * ❌ {eval_feature.feature.name}{excluded_label}")
+
+  print("\n")
 
 def get_call_to_action_api_list() -> list[str]:
   """Gets a list of call to actions
@@ -228,18 +282,26 @@ def get_call_to_action_verbs_api_list() -> list[str]:
 def calculate_score(
     evaluated_features: list[models.FeatureEvaluation],
 ) -> float:
-  """Calculate ABCD final score"""
-  total_features = len(evaluated_features)
+  """Calculate ABCD final score using only scoreable features.
+
+  Some features are still analyzed and shown in the output, but they are
+  excluded from the score numerator and denominator.
+  """
+  scoreable_features = get_scoreable_features(evaluated_features)
+
+  total_features = len(scoreable_features)
   passed_features_count = 0
-  for feature in evaluated_features:
+
+  for feature in scoreable_features:
     if feature.detected:
       passed_features_count += 1
-  # Get score
+
   score = (
       ((passed_features_count * 100) / total_features)
       if total_features > 0
       else 0
   )
+
   return score
 
 
