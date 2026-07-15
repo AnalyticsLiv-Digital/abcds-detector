@@ -58,6 +58,7 @@ def get_video_shorts_feature_configs() -> list[VideoFeature]:
   Returns:
     feature_configs: list of feature configurations
   """
+  # Get original shorts features
   feature_configs = [
       VideoFeature(
           id="a_dynamic_start",
@@ -169,6 +170,7 @@ def get_video_shorts_feature_configs() -> list[VideoFeature]:
           name="Supers",
           category=VideoFeatureCategory.SHORTS,
           sub_category=VideoFeatureSubCategory.ATTRACT,
+          sub_category=VideoFeatureSubCategory.ATTRACT,
           video_segment=VideoSegment.FULL_VIDEO,
           evaluation_criteria="""
                 Any supers (text overlays) have been incorporated at any time in the video.
@@ -196,6 +198,7 @@ def get_video_shorts_feature_configs() -> list[VideoFeature]:
           id="a_supers_with_audio",
           name="Supers with Audio",
           category=VideoFeatureCategory.SHORTS,
+          sub_category=VideoFeatureSubCategory.ATTRACT,
           sub_category=VideoFeatureSubCategory.ATTRACT,
           video_segment=VideoSegment.FULL_VIDEO,
           evaluation_criteria="""
@@ -332,6 +335,7 @@ def get_video_shorts_feature_configs() -> list[VideoFeature]:
           id="b_product_mention_speech",
           name="Product Mention (Speech)",
           category=VideoFeatureCategory.SHORTS,
+          sub_category=VideoFeatureSubCategory.BRAND,
           sub_category=VideoFeatureSubCategory.BRAND,
           video_segment=VideoSegment.FULL_VIDEO,
           evaluation_criteria="""
