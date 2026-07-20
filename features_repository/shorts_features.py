@@ -719,6 +719,10 @@ def get_video_shorts_feature_configs() -> list[VideoFeature]:
 
   return feature_configs
 
+def get_shorts_feature_configs():
+    """Return the custom 23-feature Shorts configuration."""
+    return get_video_shorts_feature_configs()
+
 #NEW CODE ABOVE
 
 # #!/usr/bin/env python3
